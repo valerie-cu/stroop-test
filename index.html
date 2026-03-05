@@ -41,7 +41,7 @@ opacity:0.7;
 
 <body>
 
-<div id="version">version: v1.6-accuracy-alltrials</div>
+<div id="version">version: v1.7-accuracy-hardcoded-20</div>
 
 <div id="instructions">
   <h2>Stroop Test</h2>
@@ -230,7 +230,7 @@ function nextTrial(){
     trialStartTime = performance.now();
     allowResponse = true;
 
-    // stimulus ends at end of trial window
+    // stimulus ends at end of trial window (word visible for exactly 1000 ms)
     stimTimer = setTimeout(() => {
       allowResponse = false;
       wordEl.innerText = "";
@@ -238,7 +238,7 @@ function nextTrial(){
 
   }, FIX_MS);
 
-  // trial ends after TRIAL_MS from function call (note: stimulus starts after FIX_MS)
+  // trial ends after TRIAL_MS total
   trialTimer = setTimeout(() => {
     allowResponse = false;
     index++;
@@ -306,11 +306,9 @@ function finish(){
   wordEl.innerText = "Finished";
   stageEl.innerHTML = "";
 
-  // Mean RT is still computed on correct trials only (misses are ignored for RT)
   const congRT = [];
   const incongRT = [];
 
-  // Correct counts (used for accuracy)
   let congC = 0;
   let incC = 0;
 
@@ -337,19 +335,19 @@ function finish(){
   const mi = mean(incongRT);
   const diff = mi - mc;
 
-  // Accuracy is now out of ALL trials shown in each stage (misses count against accuracy)
-  const accCon = TRIALS_CONG ? Math.round(100 * congC / TRIALS_CONG) : 0;
-  const accInc = TRIALS_INCONG ? Math.round(100 * incC / TRIALS_INCONG) : 0;
+  // Accuracy is now correct / 20 for each stage (missed trials reduce accuracy automatically)
+  const accCon = Math.round(100 * congC / 20);
+  const accInc = Math.round(100 * incC / 20);
 
   const mcText = Number.isFinite(mc) ? `${Math.round(mc)} ms` : "Not enough correct trials";
   const miText = Number.isFinite(mi) ? `${Math.round(mi)} ms` : "Not enough correct trials";
   const dfText = Number.isFinite(diff) ? `${Math.round(diff)} ms` : "Not available";
 
   resultsEl.innerHTML =
-    "<b>Congruent mean RT (correct only):</b> " + mcText + "<br>" +
-    "<b>Incongruent mean RT (correct only):</b> " + miText + "<br>" +
-    "<b>Stroop Effect (correct only):</b> " + dfText + "<br><br>" +
-    "Accuracy (all trials): Congruent " + accCon + "%, Incongruent " + accInc + "%";
+    "<b>Congruent mean RT:</b> " + mcText + "<br>" +
+    "<b>Incongruent mean RT:</b> " + miText + "<br>" +
+    "<b>Stroop Effect:</b> " + dfText + "<br><br>" +
+    "Accuracy: Congruent " + accCon + "%, Incongruent " + accInc + "%";
 }
 
 showInstructions();
