@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Stroop Test</title>
+<style>
+body{
+font-family:Arial;
+text-align:center;
+margin-top:150px;
+}
+#word{
+font-size:60px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Press R=Red, G=Green, B=Blue, Y=Yellow</h2>
+<div id="word"></div>
+<div id="result"></div>
+
+<script>
+
+const colors = ["red","green","blue","yellow"]
+
+let trials=[]
+let congruentTrials=15
+let incongruentTrials=15
+
+for(let i=0;i<congruentTrials;i++){
+let c=colors[Math.floor(Math.random()*4)]
+trials.push({word:c,color:c,type:"congruent"})
+}
+
+for(let i=0;i<incongruentTrials;i++){
+let word=colors[Math.floor(Math.random()*4)]
+let color=colors[Math.floor(Math.random()*4)]
+while(word===color){
+color=colors[Math.floor(Math.random()*4)]
+}
+trials.push({word:word,color:color,type:"incongruent"})
+}
+
+let index=0
+let startTime
+let data=[]
+
+function nextTrial(){
+
+if(index>=trials.length){
+finish()
+return
+}
+
+let t=trials[index]
+
+let el=document.getElementById("word")
+el.innerText=t.word.toUpperCase()
+el.style.color=t.color
+
+startTime=performance.now()
+
+setTimeout(()=>{
+index++
+nextTrial()
+},2000)
+
+}
+
+document.addEventListener("keydown",function(e){
+
+let key=e.key.toLowerCase()
+let rt=performance.now()-startTime
+let t=trials[index]
+
+let correct=false
+
+if(
+(key=="r" && t.color=="red") ||
+(key=="g" && t.color=="green") ||
+(key=="b" && t.color=="blue") ||
+(key=="y" && t.color=="yellow")
+){
+correct=true
+}
+
+data.push({
+type:t.type,
+correct:correct,
+rt:rt
+})
+
+})
+
+function finish(){
+
+let cong=[]
+let incong=[]
+
+data.forEach(d=>{
+if(d.correct){
+if(d.type=="congruent") cong.push(d.rt)
+else incong.push(d.rt)
+}
+})
+
+function avg(arr){
+return arr.reduce((a,b)=>a+b,0)/arr.length
+}
+
+let mc=avg(cong)
+let mi=avg(incong)
+
+let diff=mi-mc
+
+document.getElementById("word").innerText="Finished"
+
+document.getElementById("result").innerHTML=
+"Congruent mean RT: "+Math.round(mc)+" ms<br>"+
+"Incongruent mean RT: "+Math.round(mi)+" ms<br>"+
+"Stroop Effect: "+Math.round(diff)+" ms"
+
+}
+
+nextTrial()
+
+</script>
+
+</body>
+</html>
