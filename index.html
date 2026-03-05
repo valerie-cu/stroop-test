@@ -6,16 +6,21 @@
 body{
 font-family:Arial;
 text-align:center;
-margin-top:120px;
+margin-top:100px;
 }
 #word{
-font-size:64px;
+font-size:70px;
 margin-top:40px;
+}
+#fix{
+font-size:70px;
+margin-top:40px;
+display:none;
 }
 button{
 font-size:20px;
 padding:12px 25px;
-margin-top:30px;
+margin-top:25px;
 cursor:pointer;
 }
 </style>
@@ -35,12 +40,12 @@ B = Blue<br>
 Y = Yellow
 </p>
 
-<p>Try to respond as quickly and accurately as possible.</p>
+<p>Respond as quickly and accurately as possible.</p>
 
 <button onclick="startTest()">Start Test</button>
-
 </div>
 
+<div id="fix">+</div>
 <div id="word"></div>
 <div id="results"></div>
 
@@ -53,66 +58,70 @@ let data=[]
 let index=0
 
 let trialStart
-let trialDuration=2000
+let trialTimer
 
-let congruentTrials=15
-let incongruentTrials=15
+let fixationTime=200
+let maxTrialTime=1000
 
 function startTest(){
 
 document.getElementById("instructions").style.display="none"
 
-for(let i=0;i<congruentTrials;i++){
+for(let i=0;i<15;i++){
 let c=colors[Math.floor(Math.random()*4)]
 trials.push({word:c,color:c,type:"congruent"})
 }
 
-for(let i=0;i<incongruentTrials;i++){
-
-let word=colors[Math.floor(Math.random()*4)]
-let color=colors[Math.floor(Math.random()*4)]
-
-while(word===color){
-color=colors[Math.floor(Math.random()*4)]
+for(let i=0;i<15;i++){
+let w=colors[Math.floor(Math.random()*4)]
+let c=colors[Math.floor(Math.random()*4)]
+while(w===c){c=colors[Math.floor(Math.random()*4)]}
+trials.push({word:w,color:c,type:"incongruent"})
 }
 
-trials.push({word:word,color:color,type:"incongruent"})
-}
-
-runTrial()
+nextTrial()
 
 }
 
-function runTrial(){
+function nextTrial(){
 
 if(index>=trials.length){
 finish()
 return
 }
 
+document.getElementById("word").innerText=""
+document.getElementById("fix").style.display="block"
+
+setTimeout(showStimulus,fixationTime)
+
+}
+
+function showStimulus(){
+
 let t=trials[index]
 
-let el=document.getElementById("word")
+document.getElementById("fix").style.display="none"
 
+let el=document.getElementById("word")
 el.innerText=t.word.toUpperCase()
 el.style.color=t.color
 
 trialStart=performance.now()
 
-setTimeout(()=>{
+trialTimer=setTimeout(()=>{
 index++
-runTrial()
-},trialDuration)
+nextTrial()
+},maxTrialTime-fixationTime)
 
 }
 
 document.addEventListener("keydown",function(e){
 
+let key=e.key.toLowerCase()
 let t=trials[index]
 
 if(!t) return
-
-let key=e.key.toLowerCase()
 
 let rt=performance.now()-trialStart
 
@@ -133,6 +142,12 @@ correct:correct,
 rt:rt
 })
 
+if(correct){
+clearTimeout(trialTimer)
+index++
+nextTrial()
+}
+
 })
 
 function finish(){
@@ -147,9 +162,7 @@ else incong.push(d.rt)
 }
 })
 
-function avg(arr){
-return arr.reduce((a,b)=>a+b,0)/arr.length
-}
+function avg(a){return a.reduce((x,y)=>x+y,0)/a.length}
 
 let mc=avg(cong)
 let mi=avg(incong)
