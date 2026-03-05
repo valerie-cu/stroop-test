@@ -337,9 +337,9 @@ function finish(){
   const dfText = Number.isFinite(diff) ? `${Math.round(diff)} ms` : "Not available";
 
   resultsEl.innerHTML =
-    "<b>Congruent mean RT (correct only):</b> " + mcText + "<br>" +
-    "<b>Incongruent mean RT (correct only):</b> " + miText + "<br>" +
-    "<b>Stroop Effect (Inc - Con):</b> " + dfText + "<br><br>" +
+    "<b>Congruent mean RT:</b> " + mcText + "<br>" +
+    "<b>Incongruent mean RT:</b> " + miText + "<br>" +
+    "<b>Stroop Effect:</b> " + dfText + "<br><br>" +
     "Accuracy: Congruent " + accCon + "%, Incongruent " + accInc + "%";
 }
 
