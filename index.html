@@ -1,212 +1,166 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Stroop Test</title>
-  <style>
-    body{
-      font-family: Arial;
-      text-align: center;
-      margin-top: 120px;
-    }
-    #word{
-      font-size: 64px;
-      margin-top: 40px;
-    }
-    #screen{
-      font-size: 22px;
-      max-width: 900px;
-      margin: 0 auto;
-      line-height: 1.4;
-    }
-    .small{
-      font-size: 18px;
-      margin-top: 16px;
-      opacity: 0.85;
-    }
-  </style>
+<title>Stroop Test</title>
+<style>
+body{
+font-family:Arial;
+text-align:center;
+margin-top:120px;
+}
+#word{
+font-size:64px;
+margin-top:40px;
+}
+button{
+font-size:20px;
+padding:12px 25px;
+margin-top:30px;
+cursor:pointer;
+}
+</style>
 </head>
 
 <body>
-  <div id="screen"></div>
-  <div id="word"></div>
-  <div id="result"></div>
+
+<div id="instructions">
+<h2>Stroop Test</h2>
+
+<p>Respond to the <b>INK COLOR</b>, not the word.</p>
+
+<p>
+R = Red<br>
+G = Green<br>
+B = Blue<br>
+Y = Yellow
+</p>
+
+<p>Try to respond as quickly and accurately as possible.</p>
+
+<button onclick="startTest()">Start Test</button>
+
+</div>
+
+<div id="word"></div>
+<div id="results"></div>
 
 <script>
-  const colors = ["red","green","blue","yellow"];
 
-  // Build trials: 15 congruent then 15 incongruent
-  const trials = [];
-  const congruentTrials = 15;
-  const incongruentTrials = 15;
+const colors=["red","green","blue","yellow"]
 
-  for(let i=0;i<congruentTrials;i++){
-    const c = colors[Math.floor(Math.random()*4)];
-    trials.push({word:c, color:c, type:"congruent"});
-  }
+let trials=[]
+let data=[]
+let index=0
+let startTime
 
-  for(let i=0;i<incongruentTrials;i++){
-    let word = colors[Math.floor(Math.random()*4)];
-    let color = colors[Math.floor(Math.random()*4)];
-    while(word === color){
-      color = colors[Math.floor(Math.random()*4)];
-    }
-    trials.push({word:word, color:color, type:"incongruent"});
-  }
+let congruentTrials=15
+let incongruentTrials=15
 
-  // State
-  let index = 0;
-  let startTime = 0;
-  let data = [];
-  let started = false;
-  let allowResponses = false;
-  let trialTimer = null;
+function startTest(){
 
-  const screenEl = document.getElementById("screen");
-  const wordEl = document.getElementById("word");
-  const resultEl = document.getElementById("result");
+document.getElementById("instructions").style.display="none"
 
-  function showInstructions(){
-    wordEl.innerText = "";
-    resultEl.innerText = "";
-    screenEl.innerHTML =
-      "<h2>Stroop Test</h2>" +
-      "<div>Respond to the <b>INK COLOR</b> (not the word).</div>" +
-      "<div class='small'>R = Red, G = Green, B = Blue, Y = Yellow</div>" +
-      "<div class='small'>Try to be as fast and accurate as you can.</div>" +
-      "<div class='small' style='margin-top:28px;'><b>Press any key to start.</b></div>";
-  }
+for(let i=0;i<congruentTrials;i++){
+let c=colors[Math.floor(Math.random()*4)]
+trials.push({word:c,color:c,type:"congruent"})
+}
 
-  function nextTrial(){
-    if(index >= trials.length){
-      finish();
-      return;
-    }
+for(let i=0;i<incongruentTrials;i++){
+let word=colors[Math.floor(Math.random()*4)]
+let color=colors[Math.floor(Math.random()*4)]
 
-    const t = trials[index];
+while(word===color){
+color=colors[Math.floor(Math.random()*4)]
+}
 
-    // Show stimulus
-    screenEl.innerHTML = ""; // clear instructions during trials
-    wordEl.innerText = t.word.toUpperCase();
-    wordEl.style.color = t.color;
+trials.push({word:word,color:color,type:"incongruent"})
+}
 
-    // Start timing for this trial
-    startTime = performance.now();
-    allowResponses = true;
+nextTrial()
 
-    // Enforce fixed 2s trial length
-    if(trialTimer) clearTimeout(trialTimer);
-    trialTimer = setTimeout(()=>{
-      allowResponses = false;
-      index++;
-      nextTrial();
-    }, 2000);
-  }
+}
 
-  function keyToColor(key){
-    if(key === "r") return "red";
-    if(key === "g") return "green";
-    if(key === "b") return "blue";
-    if(key === "y") return "yellow";
-    return null;
-  }
+function nextTrial(){
 
-  document.addEventListener("keydown", (e) => {
-    const key = e.key.toLowerCase();
+if(index>=trials.length){
+finish()
+return
+}
 
-    // Start screen: any key starts the task
-    if(!started){
-      started = true;
-      showCountdownThenStart();
-      return;
-    }
+let t=trials[index]
 
-    // During trials: accept only r/g/b/y and only once per trial window
-    if(!allowResponses) return;
+let el=document.getElementById("word")
+el.innerText=t.word.toUpperCase()
+el.style.color=t.color
 
-    const chosenColor = keyToColor(key);
-    if(!chosenColor) return;
+startTime=performance.now()
 
-    const rt = performance.now() - startTime;
-    const t = trials[index];
+setTimeout(()=>{
+index++
+nextTrial()
+},2000)
 
-    const correct = (chosenColor === t.color);
+}
 
-    data.push({
-      trial: index + 1,
-      type: t.type,
-      word: t.word,
-      ink: t.color,
-      key: key,
-      correct: correct ? 1 : 0,
-      rt: Math.round(rt)
-    });
+document.addEventListener("keydown",function(e){
 
-    // Prevent multiple keypresses in the same trial from adding extra rows
-    allowResponses = false;
-  });
+let key=e.key.toLowerCase()
 
-  function showCountdownThenStart(){
-    // Optional tiny countdown feel, keeps it simple and clear
-    screenEl.innerHTML = "<div><b>Get ready...</b></div><div class='small'>The test will start now.</div>";
-    wordEl.innerText = "";
-    resultEl.innerText = "";
-    setTimeout(() => {
-      nextTrial();
-    }, 500);
-  }
+let t=trials[index]
 
-  function avg(arr){
-    if(arr.length === 0) return NaN;
-    return arr.reduce((a,b)=>a+b,0) / arr.length;
-  }
+if(!t) return
 
-  function finish(){
-    if(trialTimer) clearTimeout(trialTimer);
-    allowResponses = false;
+let rt=performance.now()-startTime
 
-    // Use correct trials only for mean RT
-    const cong = [];
-    const incong = [];
+let correct=false
 
-    data.forEach(d => {
-      if(d.correct === 1){
-        if(d.type === "congruent") cong.push(d.rt);
-        else incong.push(d.rt);
-      }
-    });
+if(
+(key=="r" && t.color=="red") ||
+(key=="g" && t.color=="green") ||
+(key=="b" && t.color=="blue") ||
+(key=="y" && t.color=="yellow")
+){
+correct=true
+}
 
-    const mc = avg(cong);
-    const mi = avg(incong);
-    const diff = mi - mc;
+data.push({
+type:t.type,
+correct:correct,
+rt:rt
+})
 
-    wordEl.innerText = "Finished";
-    wordEl.style.color = "black";
+})
 
-    // Accuracy (helpful context, not used to exclude)
-    const congAll = data.filter(d => d.type === "congruent").length;
-    const incongAll = data.filter(d => d.type === "incongruent").length;
-    const congCor = data.filter(d => d.type === "congruent" && d.correct === 1).length;
-    const incongCor = data.filter(d => d.type === "incongruent" && d.correct === 1).length;
+function finish(){
 
-    const accCon = congAll ? Math.round(100 * congCor / congAll) : 0;
-    const accInc = incongAll ? Math.round(100 * incongCor / incongAll) : 0;
+let cong=[]
+let incong=[]
 
-    screenEl.innerHTML = "<h2>Results</h2>";
+data.forEach(d=>{
+if(d.correct){
+if(d.type=="congruent") cong.push(d.rt)
+else incong.push(d.rt)
+}
+})
 
-    // If someone got zero correct in a block, mc/mi becomes NaN. We show a clear message.
-    let rtLineCon = Number.isFinite(mc) ? `${Math.round(mc)} ms` : "Not enough correct trials";
-    let rtLineInc = Number.isFinite(mi) ? `${Math.round(mi)} ms` : "Not enough correct trials";
-    let diffLine  = (Number.isFinite(diff)) ? `${Math.round(diff)} ms` : "Not available";
+function avg(arr){
+return arr.reduce((a,b)=>a+b,0)/arr.length
+}
 
-    resultEl.innerHTML =
-      "<div>Congruent mean RT (correct only): <b>" + rtLineCon + "</b></div>" +
-      "<div>Incongruent mean RT (correct only): <b>" + rtLineInc + "</b></div>" +
-      "<div>Stroop difference (Inc - Con): <b>" + diffLine + "</b></div>" +
-      "<div class='small' style='margin-top:14px;'>Accuracy: Congruent " + accCon + "%, Incongruent " + accInc + "%</div>";
-  }
+let mc=avg(cong)
+let mi=avg(incong)
 
-  // Initial screen
-  showInstructions();
+let diff=mi-mc
+
+document.getElementById("word").innerText="Finished"
+
+document.getElementById("results").innerHTML=
+"Congruent mean RT: "+Math.round(mc)+" ms<br>"+
+"Incongruent mean RT: "+Math.round(mi)+" ms<br>"+
+"Stroop Effect: "+Math.round(diff)+" ms"
+
+}
+
 </script>
 
 </body>
