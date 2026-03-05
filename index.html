@@ -35,10 +35,19 @@ line-height:1.45;
 #stage{
 min-height:60px;
 }
+#version{
+position:fixed;
+top:8px;
+left:10px;
+font-size:12px;
+opacity:0.7;
+}
 </style>
 </head>
 
 <body>
+
+<div id="version">version: v1.5s-presskey-stage2</div>
 
 <div id="instructions">
   <h2>Stroop Test</h2>
@@ -58,7 +67,7 @@ min-height:60px;
   </p>
 
   <p class="small">
-    Each trial lasts <b>2 seconds</b>. Try to be as fast and accurate as you can.
+    Each trial lasts <b>1.5 seconds</b>. Try to be as fast and accurate as you can.
   </p>
 
   <button id="startBtn">Start Test</button>
@@ -72,10 +81,12 @@ min-height:60px;
 <script>
 const colors = ["red","green","blue","yellow"];
 
-const TRIAL_MS = 2000;
+// Timing
+const TRIAL_MS = 1500;
 const FIX_MS = 200;
 const STIM_MS = TRIAL_MS - FIX_MS;
 
+// Trials
 const TRIALS_CONG = 15;
 const TRIALS_INCONG = 15;
 
@@ -83,7 +94,7 @@ let trials = [];
 let data = [];
 let index = 0;
 
-let trialStartTime = 0;     // when the stimulus appears (for RT)
+let trialStartTime = 0;
 let allowResponse = false;
 let respondedThisTrial = false;
 
@@ -100,226 +111,229 @@ const wordEl = document.getElementById("word");
 const resultsEl = document.getElementById("results");
 
 function randColor(){
-return colors[Math.floor(Math.random()*4)];
+  return colors[Math.floor(Math.random()*4)];
+}
+
+// Fisher-Yates shuffle
+function shuffle(arr){
+  for(let i = arr.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
 function buildTrials(){
-const t = [];
+  const cong = [];
+  const incong = [];
 
-// congruent first
-for(let i=0;i<TRIALS_CONG;i++){
-const c = randColor();
-t.push({word:c, ink:c, type:"congruent"});
-}
+  for(let i=0;i<TRIALS_CONG;i++){
+    const c = randColor();
+    cong.push({word:c, ink:c, type:"congruent"});
+  }
 
-// incongruent second
-for(let i=0;i<TRIALS_INCONG;i++){
-const w = randColor();
-let ink = randColor();
-while(ink === w) ink = randColor();
-t.push({word:w, ink:ink, type:"incongruent"});
-}
+  for(let i=0;i<TRIALS_INCONG;i++){
+    const w = randColor();
+    let ink = randColor();
+    while(ink === w) ink = randColor();
+    incong.push({word:w, ink:ink, type:"incongruent"});
+  }
 
-return t;
+  // Shuffle within each stage (keeps stage order but randomizes trials)
+  shuffle(cong);
+  shuffle(incong);
+
+  return cong.concat(incong);
 }
 
 function showInstructions(){
-phase = "instructions";
-stageEl.innerHTML = "";
-wordEl.innerText = "";
-fixEl.style.display = "none";
-resultsEl.innerHTML = "";
-instructionsEl.style.display = "block";
+  phase = "instructions";
+  stageEl.innerHTML = "";
+  wordEl.innerText = "";
+  fixEl.style.display = "none";
+  resultsEl.innerHTML = "";
+  instructionsEl.style.display = "block";
 }
 
 function startTest(){
-instructionsEl.style.display = "none";
-resultsEl.innerHTML = "";
-trials = buildTrials();
-data = [];
-index = 0;
-phase = "stage1";
-stageEl.innerHTML = "<b>Stage 1:</b> Congruent";
-nextTrial();
+  instructionsEl.style.display = "none";
+  resultsEl.innerHTML = "";
+  trials = buildTrials();
+  data = [];
+  index = 0;
+  phase = "stage1";
+  stageEl.innerHTML = "<b>Stage 1:</b> Congruent";
+  nextTrial();
 }
 
 function showBreak(){
-phase = "break";
-allowResponse = false;
-respondedThisTrial = false;
+  phase = "break";
+  allowResponse = false;
+  respondedThisTrial = false;
 
-stageEl.innerHTML =
-"<b>Stage 1 complete.</b><br>" +
-"<b>Stage 2:</b> Incongruent (harder).<br>" +
-"Press any key to begin, or click Continue.<br>" +
-"<button id='continueBtn'>Continue</button>";
+  stageEl.innerHTML =
+    "<b>Stage 1 complete.</b><br>" +
+    "<b>Stage 2:</b> Incongruent (harder).<br>" +
+    "<b>Press any key to begin.</b>";
 
-wordEl.innerText = "";
-fixEl.style.display = "none";
-
-document.getElementById("continueBtn").onclick = () => {
-startStage2();
-};
+  wordEl.innerText = "";
+  fixEl.style.display = "none";
 }
 
 function startStage2(){
-phase = "stage2";
-stageEl.innerHTML = "<b>Stage 2:</b> Incongruent";
-nextTrial();
+  phase = "stage2";
+  stageEl.innerHTML = "<b>Stage 2:</b> Incongruent";
+  nextTrial();
 }
 
 function clearTimers(){
-if(trialTimer) clearTimeout(trialTimer);
-if(stimTimer) clearTimeout(stimTimer);
-if(fixTimer) clearTimeout(fixTimer);
-trialTimer = null;
-stimTimer = null;
-fixTimer = null;
+  if(trialTimer) clearTimeout(trialTimer);
+  if(stimTimer) clearTimeout(stimTimer);
+  if(fixTimer) clearTimeout(fixTimer);
+  trialTimer = null;
+  stimTimer = null;
+  fixTimer = null;
 }
 
 function nextTrial(){
 
-// stage transition after congruent trials
-if(index === TRIALS_CONG && phase !== "break" && phase !== "stage2"){
-clearTimers();
-showBreak();
-return;
-}
+  // stage transition after congruent trials
+  if(index === TRIALS_CONG && phase !== "break" && phase !== "stage2"){
+    clearTimers();
+    showBreak();
+    return;
+  }
 
-// finished
-if(index >= trials.length){
-finish();
-return;
-}
+  // finished
+  if(index >= trials.length){
+    finish();
+    return;
+  }
 
-respondedThisTrial = false;
-allowResponse = false;
+  respondedThisTrial = false;
+  allowResponse = false;
 
-wordEl.innerText = "";
-fixEl.style.display = "block";
+  wordEl.innerText = "";
+  fixEl.style.display = "block";
 
-// Show fixation then stimulus
-fixTimer = setTimeout(() => {
-fixEl.style.display = "none";
+  // fixation then stimulus
+  fixTimer = setTimeout(() => {
+    fixEl.style.display = "none";
 
-const t = trials[index];
-wordEl.innerText = t.word.toUpperCase();
-wordEl.style.color = t.ink;
+    const t = trials[index];
+    wordEl.innerText = t.word.toUpperCase();
+    wordEl.style.color = t.ink;
 
-// stimulus onset for RT
-trialStartTime = performance.now();
-allowResponse = true;
+    trialStartTime = performance.now();
+    allowResponse = true;
 
-// end stimulus window at FIX_MS + STIM_MS (= 2s from trial start)
-stimTimer = setTimeout(() => {
-allowResponse = false;
-wordEl.innerText = "";
-}, STIM_MS);
+    // stimulus ends at end of trial window
+    stimTimer = setTimeout(() => {
+      allowResponse = false;
+      wordEl.innerText = "";
+    }, STIM_MS);
 
-}, FIX_MS);
+  }, FIX_MS);
 
-// End the trial exactly at 2000 ms from trial start (FIX_MS + STIM_MS)
-trialTimer = setTimeout(() => {
-allowResponse = false;
-index++;
-nextTrial();
-}, TRIAL_MS);
+  // trial ends exactly TRIAL_MS after trial start
+  trialTimer = setTimeout(() => {
+    allowResponse = false;
+    index++;
+    nextTrial();
+  }, TRIAL_MS);
 }
 
 function keyToInk(key){
-if(key === "r") return "red";
-if(key === "g") return "green";
-if(key === "b") return "blue";
-if(key === "y") return "yellow";
-return null;
+  if(key === "r") return "red";
+  if(key === "g") return "green";
+  if(key === "b") return "blue";
+  if(key === "y") return "yellow";
+  return null;
 }
 
 document.addEventListener("keydown", (e) => {
-const key = e.key.toLowerCase();
+  const key = e.key.toLowerCase();
 
-// Break screen: any key continues
-if(phase === "break"){
-startStage2();
-return;
-}
+  // Break screen: any key continues to stage 2
+  if(phase === "break"){
+    startStage2();
+    return;
+  }
 
-// Only accept responses during the task
-if(!(phase === "stage1" || phase === "stage2")) return;
-if(!allowResponse) return;
-if(respondedThisTrial) return;
+  // Only accept responses during the task
+  if(!(phase === "stage1" || phase === "stage2")) return;
+  if(!allowResponse) return;
+  if(respondedThisTrial) return;
 
-const chosenInk = keyToInk(key);
-if(!chosenInk) return;
+  const chosenInk = keyToInk(key);
+  if(!chosenInk) return;
 
-respondedThisTrial = true;
+  respondedThisTrial = true;
 
-const t = trials[index];
-const rt = performance.now() - trialStartTime;
-const correct = (chosenInk === t.ink);
+  const t = trials[index];
+  const rt = performance.now() - trialStartTime;
+  const correct = (chosenInk === t.ink);
 
-data.push({
-trial: index + 1,
-type: t.type,
-word: t.word,
-ink: t.ink,
-key: key,
-correct: correct ? 1 : 0,
-rt: Math.round(rt)
-});
+  data.push({
+    trial: index + 1,
+    type: t.type,
+    word: t.word,
+    ink: t.ink,
+    key: key,
+    correct: correct ? 1 : 0,
+    rt: Math.round(rt)
+  });
 
-// IMPORTANT: do NOT advance here.
-// Trial ends on the fixed 2-second schedule.
+  // Do NOT advance early. Trial sticks to the fixed timing.
 });
 
 function finish(){
-phase = "finished";
-clearTimers();
+  phase = "finished";
+  clearTimers();
 
-fixEl.style.display = "none";
-wordEl.style.color = "black";
-wordEl.innerText = "Finished";
-stageEl.innerHTML = "";
+  fixEl.style.display = "none";
+  wordEl.style.color = "black";
+  wordEl.innerText = "Finished";
+  stageEl.innerHTML = "";
 
-const congRT = [];
-const incongRT = [];
-let congN=0, congC=0, incN=0, incC=0;
+  const congRT = [];
+  const incongRT = [];
+  let congN=0, congC=0, incN=0, incC=0;
 
-for(const d of data){
-if(d.type === "congruent"){
-congN++;
-if(d.correct){ congC++; congRT.push(d.rt); }
-} else {
-incN++;
-if(d.correct){ incC++; incongRT.push(d.rt); }
-}
-}
+  for(const d of data){
+    if(d.type === "congruent"){
+      congN++;
+      if(d.correct){ congC++; congRT.push(d.rt); }
+    } else {
+      incN++;
+      if(d.correct){ incC++; incongRT.push(d.rt); }
+    }
+  }
 
-function mean(arr){
-if(arr.length === 0) return NaN;
-return arr.reduce((a,b)=>a+b,0)/arr.length;
-}
+  function mean(arr){
+    if(arr.length === 0) return NaN;
+    return arr.reduce((a,b)=>a+b,0)/arr.length;
+  }
 
-const mc = mean(congRT);
-const mi = mean(incongRT);
-const diff = mi - mc;
+  const mc = mean(congRT);
+  const mi = mean(incongRT);
+  const diff = mi - mc;
 
-const accCon = congN ? Math.round(100*congC/congN) : 0;
-const accInc = incN ? Math.round(100*incC/incN) : 0;
+  const accCon = congN ? Math.round(100*congC/congN) : 0;
+  const accInc = incN ? Math.round(100*incC/incN) : 0;
 
-const mcText = Number.isFinite(mc) ? `${Math.round(mc)} ms` : "Not enough correct trials";
-const miText = Number.isFinite(mi) ? `${Math.round(mi)} ms` : "Not enough correct trials";
-const dfText = Number.isFinite(diff) ? `${Math.round(diff)} ms` : "Not available";
+  const mcText = Number.isFinite(mc) ? `${Math.round(mc)} ms` : "Not enough correct trials";
+  const miText = Number.isFinite(mi) ? `${Math.round(mi)} ms` : "Not enough correct trials";
+  const dfText = Number.isFinite(diff) ? `${Math.round(diff)} ms` : "Not available";
 
-resultsEl.innerHTML =
-"<b>Congruent mean RT (correct only):</b> " + mcText + "<br>" +
-"<b>Incongruent mean RT (correct only):</b> " + miText + "<br>" +
-"<b>Stroop Effect (Inc - Con):</b> " + dfText + "<br><br>" +
-"Accuracy: Congruent " + accCon + "%, Incongruent " + accInc + "%";
+  resultsEl.innerHTML =
+    "<b>Congruent mean RT (correct only):</b> " + mcText + "<br>" +
+    "<b>Incongruent mean RT (correct only):</b> " + miText + "<br>" +
+    "<b>Stroop Effect (Inc - Con):</b> " + dfText + "<br><br>" +
+    "Accuracy: Congruent " + accCon + "%, Incongruent " + accInc + "%";
 }
 
 document.getElementById("startBtn").onclick = startTest;
-
-// initial
 showInstructions();
 </script>
 
