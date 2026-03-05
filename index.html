@@ -19,12 +19,6 @@ margin-top:40px;
 display:none;
 min-height:90px;
 }
-button{
-font-size:20px;
-padding:12px 25px;
-margin-top:25px;
-cursor:pointer;
-}
 .small{
 font-size:16px;
 opacity:0.9;
@@ -70,7 +64,7 @@ opacity:0.7;
     Each trial lasts <b>1 seconds</b>. Try to be as fast and accurate as you can.
   </p>
 
-  <button id="startBtn">Start Test</button>
+  <p class="small"><b>Press any key to start.</b></p>
 </div>
 
 <div id="stage" class="small"></div>
@@ -103,6 +97,7 @@ let stimTimer = null;
 let fixTimer = null;
 
 let phase = "instructions"; // instructions | stage1 | break | stage2 | finished
+let started = false; // prevents multiple starts from repeated keys
 
 const instructionsEl = document.getElementById("instructions");
 const stageEl = document.getElementById("stage");
@@ -148,6 +143,7 @@ function buildTrials(){
 
 function showInstructions(){
   phase = "instructions";
+  started = false;
   stageEl.innerHTML = "";
   wordEl.innerText = "";
   fixEl.style.display = "none";
@@ -254,6 +250,13 @@ function keyToInk(key){
 document.addEventListener("keydown", (e) => {
   const key = e.key.toLowerCase();
 
+  // Instructions: any key starts (once)
+  if(phase === "instructions" && !started){
+    started = true;
+    startTest();
+    return;
+  }
+
   // Break screen: any key continues to stage 2
   if(phase === "break"){
     startStage2();
@@ -333,7 +336,6 @@ function finish(){
     "Accuracy: Congruent " + accCon + "%, Incongruent " + accInc + "%";
 }
 
-document.getElementById("startBtn").onclick = startTest;
 showInstructions();
 </script>
 
