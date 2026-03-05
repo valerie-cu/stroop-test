@@ -1,336 +1,170 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <title>Stroop Test</title>
-  <style>
-    body{
-      font-family: Arial, sans-serif;
-      text-align:center;
-      margin-top:90px;
-    }
-    #panel{
-      max-width: 900px;
-      margin: 0 auto;
-      line-height: 1.45;
-      font-size: 20px;
-    }
-    #stimulus{
-      font-size: 72px;
-      margin-top: 40px;
-      height: 100px;
-    }
-    #fixation{
-      font-size: 72px;
-      margin-top: 40px;
-      height: 100px;
-      display:none;
-    }
-    button{
-      font-size: 20px;
-      padding: 12px 26px;
-      margin-top: 26px;
-      cursor: pointer;
-    }
-    .small{
-      font-size: 16px;
-      opacity: 0.85;
-      margin-top: 12px;
-    }
-  </style>
+<title>Stroop Test</title>
+<style>
+body{
+font-family:Arial;
+text-align:center;
+margin-top:120px;
+}
+#word{
+font-size:64px;
+margin-top:40px;
+}
+button{
+font-size:20px;
+padding:12px 25px;
+margin-top:30px;
+cursor:pointer;
+}
+</style>
 </head>
 
 <body>
-  <div id="panel"></div>
-  <div id="fixation">+</div>
-  <div id="stimulus"></div>
+
+<div id="instructions">
+<h2>Stroop Test</h2>
+
+<p>Respond to the <b>INK COLOR</b>, not the word.</p>
+
+<p>
+R = Red<br>
+G = Green<br>
+B = Blue<br>
+Y = Yellow
+</p>
+
+<p>Try to respond as quickly and accurately as possible.</p>
+
+<button onclick="startTest()">Start Test</button>
+
+</div>
+
+<div id="word"></div>
+<div id="results"></div>
 
 <script>
-  // -----------------------------
-  // CONFIG
-  // -----------------------------
-  const COLORS = ["red","green","blue","yellow"];
-  const TRIALS_CONG = 15;
-  const TRIALS_INCONG = 15;
 
-  const TRIAL_MS = 2000;      // fixed trial length
-  const FIX_MS = 300;         // fixation duration
-  const STIM_MS = TRIAL_MS - FIX_MS; // stimulus window inside trial
+const colors=["red","green","blue","yellow"]
 
-  // -----------------------------
-  // STATE
-  // -----------------------------
-  const panelEl = document.getElementById("panel");
-  const fixationEl = document.getElementById("fixation");
-  const stimulusEl = document.getElementById("stimulus");
+let trials=[]
+let data=[]
+let index=0
 
-  let trials = [];
-  let phase = "instructions"; // instructions | running | transition | finished
-  let block = "congruent";    // congruent | incongruent
-  let index = 0;
+let trialStart
+let trialDuration=2000
 
-  let trialStartAbs = 0;      // absolute schedule anchor
-  let stimOnsetTime = 0;      // time when stimulus appears (for RT)
-  let responseAllowed = false;
-  let respondedThisTrial = false;
+let congruentTrials=15
+let incongruentTrials=15
 
-  // store all keypress events as trial rows (one row per trial max)
-  const data = [];
+function startTest(){
 
-  // -----------------------------
-  // HELPERS
-  // -----------------------------
-  function randInt(n){ return Math.floor(Math.random()*n); }
+document.getElementById("instructions").style.display="none"
 
-  function makeTrials(){
-    const t = [];
+for(let i=0;i<congruentTrials;i++){
+let c=colors[Math.floor(Math.random()*4)]
+trials.push({word:c,color:c,type:"congruent"})
+}
 
-    // 15 congruent first
-    for(let i=0;i<TRIALS_CONG;i++){
-      const c = COLORS[randInt(4)];
-      t.push({type:"congruent", word:c, ink:c});
-    }
+for(let i=0;i<incongruentTrials;i++){
 
-    // 15 incongruent second
-    for(let i=0;i<TRIALS_INCONG;i++){
-      const w = COLORS[randInt(4)];
-      let ink = COLORS[randInt(4)];
-      while(ink === w){
-        ink = COLORS[randInt(4)];
-      }
-      t.push({type:"incongruent", word:w, ink:ink});
-    }
+let word=colors[Math.floor(Math.random()*4)]
+let color=colors[Math.floor(Math.random()*4)]
 
-    return t;
-  }
+while(word===color){
+color=colors[Math.floor(Math.random()*4)]
+}
 
-  function keyToColor(k){
-    if(k === "r") return "red";
-    if(k === "g") return "green";
-    if(k === "b") return "blue";
-    if(k === "y") return "yellow";
-    return null;
-  }
+trials.push({word:word,color:color,type:"incongruent"})
+}
 
-  function showInstructions(){
-    phase = "instructions";
-    fixationEl.style.display = "none";
-    stimulusEl.innerText = "";
-    panelEl.innerHTML = `
-      <h2>Stroop Test</h2>
-      <div>Respond to the <b>INK COLOR</b>, not the word.</div>
-      <div class="small">Keys: R = Red, G = Green, B = Blue, Y = Yellow</div>
-      <div class="small">Try to be as fast and accurate as you can.</div>
-      <button id="startBtn">Start</button>
-    `;
-    document.getElementById("startBtn").onclick = startExperiment;
-  }
+runTrial()
 
-  function showTransition(){
-    phase = "transition";
-    fixationEl.style.display = "none";
-    stimulusEl.innerText = "";
-    panelEl.innerHTML = `
-      <h2>Section complete</h2>
-      <div>You finished the congruent trials.</div>
-      <div class="small">Next is the incongruent section. It may feel harder.</div>
-      <div class="small"><b>Press any key to continue.</b></div>
-    `;
-  }
+}
 
-  function startExperiment(){
-    trials = makeTrials();
-    data.length = 0;
+function runTrial(){
 
-    block = "congruent";
-    index = 0;
-    phase = "running";
+if(index>=trials.length){
+finish()
+return
+}
 
-    panelEl.innerHTML = "";
-    stimulusEl.innerText = "";
-    fixationEl.style.display = "none";
+let t=trials[index]
 
-    // Anchor the schedule so trials are spaced exactly TRIAL_MS apart
-    trialStartAbs = performance.now() + 250; // tiny buffer so it feels smooth
-    runTrialAtIndex(0);
-  }
+let el=document.getElementById("word")
 
-  function runTrialAtIndex(i){
-    if(phase !== "running") return;
+el.innerText=t.word.toUpperCase()
+el.style.color=t.color
 
-    // Check if we reached the transition point (after 15 congruent)
-    if(i === TRIALS_CONG && block === "congruent"){
-      block = "incongruent";
-      showTransition();
-      return;
-    }
+trialStart=performance.now()
 
-    // End after all trials
-    if(i >= trials.length){
-      finish();
-      return;
-    }
+setTimeout(()=>{
+index++
+runTrial()
+},trialDuration)
 
-    index = i;
+}
 
-    // Absolute scheduled start time for this trial
-    const scheduledStart = trialStartAbs + i * TRIAL_MS;
+document.addEventListener("keydown",function(e){
 
-    // Correct drift: start exactly at scheduledStart
-    const now = performance.now();
-    const delayToStart = Math.max(0, scheduledStart - now);
+let t=trials[index]
 
-    setTimeout(() => {
-      startOneTrial(i, scheduledStart);
-    }, delayToStart);
-  }
+if(!t) return
 
-  function startOneTrial(i, scheduledStart){
-    if(phase !== "running") return;
+let key=e.key.toLowerCase()
 
-    respondedThisTrial = false;
-    responseAllowed = false;
+let rt=performance.now()-trialStart
 
-    // Fixation
-    panelEl.innerHTML = "";
-    stimulusEl.innerText = "";
-    fixationEl.style.display = "block";
+let correct=false
 
-    // Stimulus onset after FIX_MS
-    setTimeout(() => {
-      fixationEl.style.display = "none";
+if(
+(key=="r" && t.color=="red") ||
+(key=="g" && t.color=="green") ||
+(key=="b" && t.color=="blue") ||
+(key=="y" && t.color=="yellow")
+){
+correct=true
+}
 
-      const t = trials[i];
-      stimulusEl.innerText = t.word.toUpperCase();
-      stimulusEl.style.color = t.ink;
+data.push({
+type:t.type,
+correct:correct,
+rt:rt
+})
 
-      stimOnsetTime = performance.now();
-      responseAllowed = true;
+})
 
-      // End stimulus window at FIX_MS + STIM_MS = 2000ms from trial start
-      setTimeout(() => {
-        responseAllowed = false;
-        stimulusEl.innerText = "";
-      }, STIM_MS);
+function finish(){
 
-    }, FIX_MS);
+let cong=[]
+let incong=[]
 
-    // Move to next trial exactly at scheduledStart + TRIAL_MS using absolute schedule
-    const nextIndex = i + 1;
-    const nextScheduled = trialStartAbs + nextIndex * TRIAL_MS;
-    const delayToNext = Math.max(0, nextScheduled - performance.now());
+data.forEach(d=>{
+if(d.correct){
+if(d.type=="congruent") cong.push(d.rt)
+else incong.push(d.rt)
+}
+})
 
-    setTimeout(() => {
-      runTrialAtIndex(nextIndex);
-    }, delayToNext);
-  }
+function avg(arr){
+return arr.reduce((a,b)=>a+b,0)/arr.length
+}
 
-  function finish(){
-    phase = "finished";
-    fixationEl.style.display = "none";
-    stimulusEl.style.color = "black";
-    stimulusEl.innerText = "Finished";
+let mc=avg(cong)
+let mi=avg(incong)
 
-    // Compute means using correct trials only
-    const congRT = [];
-    const incongRT = [];
+let diff=mi-mc
 
-    let congTotal = 0, congCorrect = 0;
-    let incongTotal = 0, incongCorrect = 0;
+document.getElementById("word").innerText="Finished"
 
-    for(const row of data){
-      if(row.type === "congruent"){
-        congTotal++;
-        if(row.correct === 1){
-          congCorrect++;
-          congRT.push(row.rt);
-        }
-      } else {
-        incongTotal++;
-        if(row.correct === 1){
-          incongCorrect++;
-          incongRT.push(row.rt);
-        }
-      }
-    }
+document.getElementById("results").innerHTML=
+"Congruent mean RT: "+Math.round(mc)+" ms<br>"+
+"Incongruent mean RT: "+Math.round(mi)+" ms<br>"+
+"Stroop Effect: "+Math.round(diff)+" ms"
 
-    function mean(arr){
-      if(arr.length === 0) return NaN;
-      return arr.reduce((a,b)=>a+b,0)/arr.length;
-    }
+}
 
-    const mc = mean(congRT);
-    const mi = mean(incongRT);
-    const diff = mi - mc;
-
-    const accCon = congTotal ? Math.round(100*congCorrect/congTotal) : 0;
-    const accInc = incongTotal ? Math.round(100*incongCorrect/incongTotal) : 0;
-
-    const mcText = Number.isFinite(mc) ? `${Math.round(mc)} ms` : "Not enough correct trials";
-    const miText = Number.isFinite(mi) ? `${Math.round(mi)} ms` : "Not enough correct trials";
-    const dfText = Number.isFinite(diff) ? `${Math.round(diff)} ms` : "Not available";
-
-    panelEl.innerHTML = `
-      <h2>Results</h2>
-      <div>Congruent mean RT (correct only): <b>${mcText}</b></div>
-      <div>Incongruent mean RT (correct only): <b>${miText}</b></div>
-      <div>Stroop difference (Inc - Con): <b>${dfText}</b></div>
-      <div class="small" style="margin-top:14px;">
-        Accuracy: Congruent ${accCon}%, Incongruent ${accInc}%
-      </div>
-      <div class="small">
-        Note: If someone answers incorrectly, that trial is not used in the mean RT.
-      </div>
-    `;
-  }
-
-  // -----------------------------
-  // INPUT HANDLING
-  // -----------------------------
-  document.addEventListener("keydown", (e) => {
-    const key = e.key.toLowerCase();
-
-    // Transition: any key continues
-    if(phase === "transition"){
-      phase = "running";
-      panelEl.innerHTML = "";
-      stimulusEl.innerText = "";
-      fixationEl.style.display = "none";
-
-      // Continue at the current index (which should be 15)
-      runTrialAtIndex(TRIALS_CONG);
-      return;
-    }
-
-    // During trials: accept one response per trial (r/g/b/y)
-    if(phase !== "running") return;
-    if(!responseAllowed) return;
-    if(respondedThisTrial) return;
-
-    const chosen = keyToColor(key);
-    if(!chosen) return;
-
-    respondedThisTrial = true;
-
-    const t = trials[index];
-    const rt = performance.now() - stimOnsetTime;
-    const correct = (chosen === t.ink) ? 1 : 0;
-
-    data.push({
-      trial: index + 1,
-      type: t.type,
-      word: t.word,
-      ink: t.ink,
-      key: key,
-      correct: correct,
-      rt: Math.round(rt)
-    });
-  });
-
-  // -----------------------------
-  // INIT
-  // -----------------------------
-  showInstructions();
 </script>
 
 </body>
