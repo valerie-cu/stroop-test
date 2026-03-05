@@ -51,6 +51,13 @@ opacity:0.7;
     Example: if <b>RED</b> is shown in <span style="color:blue;"><b>blue</b></span>, press <b>B</b>.
   </p>
 
+  <p class="small">
+    The test has <b>two stages</b>:<br>
+    <b>Stage 1:</b> the word and ink color will match.<br>
+    <b>Stage 2:</b> the word and ink color will not match.<br>
+    In both stages, always respond to the <b>ink color</b>.
+  </p>
+
   <p class="small"><b>Press the following keys:</b></p>
 
   <p class="small">
@@ -61,7 +68,7 @@ opacity:0.7;
   </p>
 
   <p class="small">
-    Each trial lasts <b>1 seconds</b>. Try to be as fast and accurate as you can.
+    Each trial lasts <b>1 second</b>. Try to be as fast and accurate as you can.
   </p>
 
   <p class="small"><b>Press any key to start.</b></p>
@@ -169,7 +176,7 @@ function showBreak(){
 
   stageEl.innerHTML =
     "<b>Stage 1 complete.</b><br>" +
-    "<b>Stage 2:</b> Incongruent (harder).<br>" +
+    "<b>Stage 2:</b> Incongruent.<br>" +
     "<b>Press any key to begin.</b>";
 
   wordEl.innerText = "";
@@ -231,7 +238,7 @@ function nextTrial(){
 
   }, FIX_MS);
 
-  // trial ends exactly TRIAL_MS after trial start
+  // trial ends after TRIAL_MS from function call (note: stimulus starts after FIX_MS)
   trialTimer = setTimeout(() => {
     allowResponse = false;
     index++;
